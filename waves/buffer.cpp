@@ -1,5 +1,7 @@
 #include "buffer.h"
 
+#include <string.h>
+
 char *getBuffer()
 {
   return buffer;

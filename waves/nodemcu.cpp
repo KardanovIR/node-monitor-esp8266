@@ -1,6 +1,8 @@
 #include "nodemcu.h"
 #include "console.h"
 
+#include "Arduino.h"
+
 void printHardwareInformation()
 {
   printDelemiter();

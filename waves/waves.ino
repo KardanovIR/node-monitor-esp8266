@@ -1,6 +1,8 @@
 #include "nodemcu.h"
 #include "dns.h"
 #include "server.h"
+#include "eeprom.h"
+#include "wifi.h"
 
 void setup()
 {

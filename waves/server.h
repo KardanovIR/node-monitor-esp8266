@@ -2,7 +2,7 @@
 
 #include "constants.h"
 
-ESP8266WebServer server(HTTP_PORT);
+static ESP8266WebServer server(HTTP_PORT);
 
 void handleRoot();
 void initServer();

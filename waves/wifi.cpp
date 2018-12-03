@@ -1,6 +1,10 @@
 #include "wifi.h"
+#include <Arduino.h>
+
 #include "constants.h"
 #include "eeprom.h"
+#include "console.h"
+#include "buffer.h"
 
 void initAP()
 {
