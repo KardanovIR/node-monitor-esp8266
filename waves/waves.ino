@@ -1,24 +1,43 @@
 #include "nodemcu.h"
 #include "dns.h"
 #include "server.h"
-#include "eeprom.h"
 #include "wifi.h"
+#include "data.h"
+#include "node.h"
+
+ADC_MODE(ADC_VCC);
+
+unsigned long pollTime;
 
 void setup()
 {
     Serial.begin(9600);
     Serial.println();
 
-    initEEPROM();
-
     printHardwareInformation();
     initWiFi();
     initServer();
     initDNS();
+
+    pollTime = millis();
 }
 
 void loop()
 {
     handleServer();
     handleDNS();
+
+    if (millis() - pollTime > 1000 || millis() < pollTime)
+    {
+        pollTime = millis();
+        if (WiFi.status() == WL_CONNECTED)
+        {
+            wifiStatus.set(true);
+            updateNodeInformation();
+        }
+        else
+        {
+            wifiStatus.set(false);
+        }
+    }
 }

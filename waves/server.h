@@ -4,6 +4,5 @@
 
 static ESP8266WebServer server(HTTP_PORT);
 
-void handleRoot();
 void initServer();
 void handleServer();
