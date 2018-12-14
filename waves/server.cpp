@@ -7,19 +7,51 @@
 #include "data.h"
 
 StaticJsonBuffer<JSON_BUFFER_LENGTH> json;
-JsonObject& root = json.createObject();
+JsonObject &root = json.createObject();
+
+String versionToString(Version v) {
+    String result = "v";
+    result += String(v.major);
+    result += '.';
+    result += String(v.minor);
+    result += '.';
+    result += String(v.fix);
+    return result;
+}
 
 void handleRoot()
 {
     String br = makeBR();
     String content = makeWavesLogo() + makeWavesLabel() + br;
-    
+
     String tableContent;
     tableContent += makeTableRow2("Address:", getNodeAddress(), AJAX_HOST);
+    tableContent += makeTableRow2("Version:", versionToString(version.get()), AJAX_VERSION);
+    switch (nodeStatus.get())
+    {
+    case 0:
+    {
+        tableContent += makeTableRow2("Status:", "connection failed", AJAX_NODE_STATUS);
+        break;
+    }
+    case 1:
+    {
+        tableContent += makeTableRow2("Status:", "request failed", AJAX_NODE_STATUS);
+        break;
+    }
+    case 2:
+    {
+        tableContent += makeTableRow2("Status:", "ok", AJAX_NODE_STATUS);
+        break;
+    }
+    }
     String timeout(getNodeTimeout());
     tableContent += makeTableRow2("Timeout:", timeout, AJAX_TIMEOUT);
     String heightString(height.get());
     tableContent += makeTableRow2("Height:", height.isInit() ? heightString : CONTENT_NONE, AJAX_HEIGHT);
+    tableContent += makeTableRow2("Date:", date.isInit() ? date.get() : CONTENT_NONE, AJAX_DATE);
+    String timeString(timeStamp.get());
+    tableContent += makeTableRow2("Timestamp:", timeString, AJAX_TIMESTAMP);
     tableContent += makeTableRow2("", "");
     tableContent += makeTableRow2("", "");
     tableContent += makeTableRow2("", "");
@@ -150,10 +182,32 @@ void handleGetState()
     root[AJAX_FREE] = ESP.getFreeHeap();
     root[AJAX_RSSI] = WiFi.RSSI();
     root[AJAX_WIFI] = wifiStatus.isInit() && wifiStatus.get() ? "on" : "off";
+    switch (nodeStatus.get())
+    {
+    case 0:
+    {
+        root[AJAX_NODE_STATUS] = "connection failed";
+        break;
+    }
+    case 1:
+    {
+        root[AJAX_NODE_STATUS] = "request failed";
+        break;
+    }
+    case 2:
+    {
+        root[AJAX_NODE_STATUS] = "ok";
+        break;
+    }
+    }
+    root[AJAX_WIFI] = wifiStatus.isInit() && wifiStatus.get() ? "on" : "off";
     // NODE
     root[AJAX_HOST] = getNodeAddress();
     root[AJAX_TIMEOUT] = getNodeTimeout();
     root[AJAX_HEIGHT] = height.get();
+    root[AJAX_VERSION] = versionToString(version.get());
+    root[AJAX_DATE] = date.get();
+    root[AJAX_TIMESTAMP] = timeStamp.get();
 
     root.printTo(content);
     server.send(200, "application/json", content);

@@ -13,6 +13,10 @@ Lazy<byte> nodeTimeout;
 
 Lazy<bool> wifiStatus;
 Lazy<long> height;
+Lazy<byte> nodeStatus;
+Lazy<Version> version;
+Lazy<String> date;
+Lazy<String> timeStamp;
 
 String getWiFiApPassword()
 {

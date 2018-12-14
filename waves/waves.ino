@@ -33,10 +33,12 @@ void loop()
         if (WiFi.status() == WL_CONNECTED)
         {
             wifiStatus.set(true);
+            nodeStatus.set(1);
             updateNodeInformation();
         }
         else
         {
+            nodeStatus.set(0);
             wifiStatus.set(false);
         }
     }

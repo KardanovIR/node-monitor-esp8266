@@ -57,4 +57,12 @@ static const char AJAX_RSSI[] = "rssi";
 static const char AJAX_WIFI[] = "wifi";
 static const char AJAX_TIMEOUT[] = "timeout";
 static const char AJAX_HOST[] = "host";
-static const char AJAX_HEIGHT[] = "height";
+static const char AJAX_HEIGHT[] = "blockchainHeight";
+static const char AJAX_NODE_STATUS[] = "status";
+static const char AJAX_VERSION[] = "version";
+static const char AJAX_DATE[] = "updatedDate";
+static const char AJAX_TIMESTAMP[] = "updatedTimestamp";
+// Version
+static String DIGITS = "0123456789";
+// HTTPS
+const char GITHUB_FINGER_PRINT[] = "5F F1 60 31 09 04 3E F2 90 D2 B0 8A 50 38 04 E8 37 9F BC 76";
