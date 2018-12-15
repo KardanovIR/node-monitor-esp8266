@@ -1,0 +1,2 @@
+void heightDifferenceAlarm();
+void mainingAlarm();

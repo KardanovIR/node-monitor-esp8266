@@ -20,7 +20,7 @@ String makeBR()
 
 String makeTableRow2(String label, String value, String id)
 {
-    return makeTag(HTTP_TR_TAG, makeTag(HTTP_TH_TAG, label, "class='right'") + makeTag(HTTP_TH_TAG, value, (id.length() ? "id='" + id + "' " : "") + " class='left'"));
+    return makeTag(HTTP_TR_TAG, makeTag(HTTP_TH_TAG, label, "class='r'") + makeTag(HTTP_TH_TAG, value, (id.length() ? "id='" + id + "' " : "") + " class='l'"));
 }
 
 String makeAjax(byte timeout)

@@ -62,3 +62,20 @@ void writeByteEEPROM(int index, byte data)
     EEPROM.commit();
     endEEPROM();
 }
+
+uint16_t readUint16EEPROM(int index)
+{
+    initEEPROM();
+    uint16_t result = (EEPROM.read(index) << 8) + EEPROM.read(index + 1);
+    endEEPROM();
+    return result;
+}
+
+void writeUint16EEPROM(int index, uint16_t data)
+{
+    initEEPROM();
+    EEPROM.write(index, (data >> 8) & 0xFF);
+    EEPROM.write(index + 1, data & 0xFF);
+    EEPROM.commit();
+    endEEPROM();
+}

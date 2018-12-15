@@ -3,6 +3,7 @@
 #include "data.h"
 #include "http.h"
 #include "constants.h"
+#include "alarm.h"
 
 #include <WiFiClient.h>
 #include <WiFiClientSecure.h>
@@ -10,10 +11,15 @@
 #include <ArduinoJson.h>
 
 WiFiClient client;
-WiFiClientSecure clientSecure;
 HTTPClient http;
 
-StaticJsonBuffer<2048> buffer;
+int needUpdatePeer = 0;
+int needUpdateMainingHistory = 0;
+const int UPDATE_TIME_PEER = 10;
+const int UPDATE_TIME_MAINING_HISTORY = 10;
+bool fullBlockHistory = false;
+const int MAX_HEIGHT_DIFFERENCE = 5;
+int lastMainingCount = 0;
 
 enum ParseState
 {
@@ -96,30 +102,61 @@ Version stringToVersion(String str)
     return v;
 }
 
-void updateHeight()
+bool updateHeight()
 {
-    String res = get(getNodeAddress() + "/node/status", http);
+    String res = get(getNodeAddress(), getNodePort(), "/node/status", http);
     if (res.length() > 10)
     {
         nodeStatus.set(2);
-        buffer.clear();
+        StaticJsonBuffer<1024> buffer;
         JsonObject &root = buffer.parseObject(res);
         height.set(root[AJAX_HEIGHT]);
         date.set(root[AJAX_DATE]);
         timeStamp.set(root[AJAX_TIMESTAMP]);
     }
+    else
+    {
+        return false;
+    }
+
+    return true;
+}
+
+void updateOtherHeight()
+{
+    String res = get(getOtherNodeAddress(), getOtherNodePort(), "/node/status", http);
+    if (res.length() > 10)
+    {
+        nodeStatus.set(2);
+        StaticJsonBuffer<1024> buffer;
+        JsonObject &root = buffer.parseObject(res);
+        otherHeight.set(root[AJAX_HEIGHT]);
+        otherDate.set(root[AJAX_DATE]);
+        otherTimeStamp.set(root[AJAX_TIMESTAMP]);
+    }
 }
 
 void updateVersion()
 {
-    String res = get(getNodeAddress() + "/node/version", http);
+    String res = get(getNodeAddress(), getNodePort(), "/node/version", http);
     if (res.length() > 10)
     {
         nodeStatus.set(2);
-        buffer.clear();
+        StaticJsonBuffer<1024> buffer;
         JsonObject &root = buffer.parseObject(res);
         version.set(stringToVersion(root[AJAX_VERSION]));
     }
+
+    // res = getSecure("api.github.com", "/repos/wavesplatform/Waves/releases/latest", GITHUB_FINGERPRINT);
+    // if (res.length() > 10)
+    // {
+    //     nodeStatus.set(2);
+    //     buffer.clear();
+    //     JsonObject &root = buffer.parseObject(res);
+    //     version.set(stringToVersion(root[AJAX_VERSION]));
+    // } else {
+    //     Serial.println("ERROR");
+    // }
 
     // if (clientSecure.verify(GITHUB_FINGER_PRINT, "api.github.com"))
     // {
@@ -140,41 +177,149 @@ void updateVersion()
 
 void updatePeers()
 {
-    Serial.println(getNodeAddress().c_str());
-    if (client.connect(getNodeAddress().c_str(), 80))
+    if (client.connect(getNodeAddress().c_str(), getNodePort()))
     {
-        client.print(String("GET /peers/conected HTTP/1.1\r\nHost:" + getNodeAddress() + "\r\nUser-Agent: ESP8266\r\nConnection: close\r\n\r\n"));
+        client.print(String("GET /peers/connected HTTP/1.1\r\nHost: " + getNodeAddress() + "\r\nUser-Agent: ESP8266\r\nConnection: close\r\n\r\n"));
         while (client.connected())
         {
             String line = client.readStringUntil('\n');
             if (line == "\r")
                 break;
-
-            line = client.readStringUntil('}');
-            Serial.println(line);
         }
-    } else {
-        Serial.println("NO CONNECT");
+
+        int count = 0;
+        while (client.connected())
+        {
+            String line = client.readStringUntil('}');
+            count++;
+        }
+
+        peers.set(count > 1 ? count - 1 : 0);
     }
-    // String res = get(getNodeAddress() + "/peers/connected", http);
-    // if (res.length() > 10)
-    // {
-    //     nodeStatus.set(2);
-    //     int count = 0;
-    //     for (int i = 0; i < res.length(); i++)
-    //     {
-    //         if (res[i] == '{')
-    //         {
-    //             count++;
-    //         }
-    //     }
-    //     peers.set(count > 1 ? count - 1 : 0);
-    // }
+}
+
+void updateBalance()
+{
+    if (getAddress())
+    {
+        String res = get(getOtherNodeAddress(), getOtherNodePort(), "/addresses/effectiveBalance/" + getAddress(), http);
+        if (res.length() > 10)
+        {
+            nodeStatus.set(2);
+            StaticJsonBuffer<1024> buffer;
+            JsonObject &root = buffer.parseObject(res);
+            balance.set(root[AJAX_BALANCE]);
+        }
+    }
+}
+
+int calculateMaining(int start, int end, String address)
+{
+    int result = 0;
+
+    if (client.connect(getNodeAddress().c_str(), getNodePort()))
+    {
+        client.print(String("GET /blocks/headers/seq/" + String(start) + "/" + String(end) + " HTTP/1.1\r\nHost: " + getNodeAddress() + "\r\nUser-Agent: ESP8266\r\nConnection: close\r\n\r\n"));
+        while (client.connected())
+        {
+            String line = client.readStringUntil('\n');
+            if (line == "\r")
+                break;
+        }
+
+        int count = 0;
+        while (client.connected())
+        {
+            if (client.readStringUntil('\n').indexOf(address) == 17)
+                result++;
+        }
+    }
+
+    return result;
+}
+
+void updateMaining()
+{
+    // update blocks :)
+    for (int i = 0; i < BLOCKS_LENGTH; i++)
+    {
+        if (blocks[i].start <= height.get() && blocks[i].stop >= height.get())
+        {
+            blocks[i].value = calculateMaining(blocks[i].start, blocks[i].stop, getAddress());
+            if (blocks[i].value > lastMainingCount)
+                mainingAlarm();
+            lastMainingCount = blocks[i].value;
+            return;
+        }
+    }
+
+    // search insert new block
+    for (int i = 0; i < BLOCKS_LENGTH; i++)
+    {
+        if (blocks[i].start == 0 && blocks[i].stop == 0)
+        {
+            blocks[i].start = i > 0 ? blocks[i - 1].stop + 1 : height.get();
+            blocks[i].stop = blocks[i].start + BLOCK_GET_LENGTH;
+            blocks[i].value = calculateMaining(blocks[i].start, blocks[i].stop, getAddress());
+            lastMainingCount = blocks[i].value;
+            return;
+        }
+    }
+
+    fullBlockHistory = true;
+
+    // if full
+    for (int i = 1; i < BLOCKS_LENGTH; i++)
+    {
+        blocks[i - 1].start = blocks[i].start;
+        blocks[i - 1].stop = blocks[i].stop;
+        blocks[i - 1].value = blocks[i].value;
+    }
+    blocks[BLOCKS_LENGTH - 1].start = blocks[BLOCKS_LENGTH - 2].stop + 1;
+    blocks[BLOCKS_LENGTH - 1].stop = blocks[BLOCKS_LENGTH - 1].start + BLOCK_GET_LENGTH;
+    blocks[BLOCKS_LENGTH - 1].value = calculateMaining(blocks[BLOCKS_LENGTH - 1].start, blocks[BLOCKS_LENGTH - 1].start, getAddress());
+    lastMainingCount = blocks[BLOCKS_LENGTH - 1].value;
 }
 
 void updateNodeInformation()
 {
-    updateHeight();
+    if (!updateHeight())
+        return;
+
+    updateOtherHeight();
+
+    if (abs(height.get() - otherHeight.get()) > MAX_HEIGHT_DIFFERENCE)
+        heightDifferenceAlarm();
+
     updateVersion();
-    updatePeers();
+    updateBalance();
+
+    if (needUpdatePeer >= UPDATE_TIME_PEER)
+    {
+        updatePeers();
+        needUpdatePeer = 0;
+    }
+    needUpdatePeer++;
+
+    if (needUpdateMainingHistory >= UPDATE_TIME_MAINING_HISTORY)
+    {
+        updateMaining();
+
+        // Download history :)
+        if (!fullBlockHistory)
+        {
+            for (int i = BLOCKS_LENGTH - 1; i > 0; i--)
+            {
+                blocks[i].start = blocks[i - 1].start;
+                blocks[i].stop = blocks[i - 1].stop;
+                blocks[i].value = blocks[i - 1].value;
+            }
+
+            blocks[0].stop = blocks[1].start - 1;
+            blocks[0].start = blocks[0].stop - BLOCK_GET_LENGTH;
+            blocks[0].value = calculateMaining(blocks[0].start, blocks[0].stop, getAddress());
+        }
+        needUpdateMainingHistory = 0;
+    }
+    needUpdateMainingHistory++;
 }

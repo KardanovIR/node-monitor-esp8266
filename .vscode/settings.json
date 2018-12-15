@@ -4,6 +4,15 @@
         "*.tcc": "cpp",
         "istream": "cpp",
         "tuple": "cpp",
-        "utility": "cpp"
+        "utility": "cpp",
+        "string_view": "cpp",
+        "deque": "cpp",
+        "unordered_map": "cpp",
+        "vector": "cpp",
+        "system_error": "cpp",
+        "initializer_list": "cpp",
+        "optional": "cpp",
+        "ostream": "cpp",
+        "type_traits": "cpp"
     }
 }

@@ -27,6 +27,8 @@ void initSTA()
 {
   String password = readStringEEPROM(WIFI_PASSWORD_INDEX, WIFI_PASSWORD_LENGTH);
   String ssid = readStringEEPROM(WIFI_SSID_INDEX, WIFI_SSID_LENGTH);
+  Serial.println(ssid);
+  Serial.println(password);
   WiFi.begin(ssid.c_str(), password.c_str());
 }
 
