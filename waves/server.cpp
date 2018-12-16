@@ -6,17 +6,6 @@
 #include "presethtml.h"
 #include "data.h"
 
-String versionToString(Version v)
-{
-    String result = "v";
-    result += String(v.major);
-    result += '.';
-    result += String(v.minor);
-    result += '.';
-    result += String(v.fix);
-    return result;
-}
-
 void handleRoot()
 {
     String br = makeBR();

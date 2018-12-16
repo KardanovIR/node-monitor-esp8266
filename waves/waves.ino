@@ -4,6 +4,8 @@
 #include "wifi.h"
 #include "data.h"
 #include "node.h"
+#include "display.h"
+#include "alarm.h"
 
 ADC_MODE(ADC_VCC);
 
@@ -11,6 +13,7 @@ unsigned long pollTime;
 
 void setup()
 {
+    initAlarm();
     Serial.begin(9600);
     Serial.println();
 
@@ -18,6 +21,14 @@ void setup()
     initWiFi();
     initServer();
     initDNS();
+    initDisplay();
+    displayLogo();
+
+    // for (int i = 0; i < 20; i++)
+    // {
+    //     tone(D0, i*100);
+    //     delay(500);
+    // }
 
     pollTime = millis();
 }

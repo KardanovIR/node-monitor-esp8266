@@ -4,6 +4,7 @@
 #include "http.h"
 #include "constants.h"
 #include "alarm.h"
+#include "display.h"
 
 #include <WiFiClient.h>
 #include <WiFiClientSecure.h>
@@ -322,4 +323,5 @@ void updateNodeInformation()
         needUpdateMainingHistory = 0;
     }
     needUpdateMainingHistory++;
+    updateDisplay();
 }

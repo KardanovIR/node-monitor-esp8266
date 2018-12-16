@@ -60,3 +60,5 @@ String getAddress();
 void setAddress(String value);
 
 String getMainingString(BlockMaining[]);
+
+String versionToString(Version v);
